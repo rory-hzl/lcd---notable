@@ -1,0 +1,60 @@
+#include "mbed.h"
+
+DigitalIn button1(D2, PullUp);
+DigitalIn button2(D3, PullUp);
+DigitalIn button3(D4, PullUp);
+DigitalIn button4(D5, PullUp);
+ //pins for each button
+
+long long total_score;
+Thread timerThread;
+
+using namespace std::chrono;
+Timer t;
+int t_finished = 0;
+
+void score_calc() {
+    //thread_sleep_for(10000);
+    printf("total time: %lld ms\n", duration_cast<milliseconds>(t.elapsed_time()).count());
+    total_score += (10000 - duration_cast<milliseconds>(t.elapsed_time()).count());
+    printf("score is: %lld\n", total_score);
+}
+
+void timer_tens() { //thread to run for 10s, for if the user runs out of time without pressing a button
+    thread_sleep_for(10000);
+    t.stop();
+    t_finished = 1;
+    score_calc();
+}
+
+int main() {
+    thread_sleep_for(4000);
+    printf("play note 1\n");
+    for (int q = 3; q > 0; --q) { //countdown
+        printf("timer starts in: %d seconds\n", q);
+        thread_sleep_for(1000);
+    }
+    
+    timerThread.start(timer_tens);
+    t.start();
+    printf("timer started\n");
+    while (t_finished == 0) { //whilst timer is running
+        if (button1 == 0) { //correct button
+            printf("correct note was played\n");
+            t.stop();
+            printf("timer finished\n");
+            score_calc();
+            timerThread.terminate();
+            break;
+        } else if (button2 == 0||button3 == 0||button4 == 0) { //if wrong buttons
+            printf("incorrect note played, score 0\n");
+            t.stop();
+            printf("timer finished\n");
+            timerThread.terminate();
+            break;
+        }
+    }
+    while (true) {
+        sleep();
+    }
+}
